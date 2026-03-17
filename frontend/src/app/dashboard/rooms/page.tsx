@@ -11,6 +11,7 @@ import { useAuth } from "@/lib/auth";
 import { roomApi } from "@/lib/api";
 import { formatPrice } from "@/lib/helpers";
 import { Room } from "@/types";
+import ImageUpload from "@/components/ImageUpload";
 
 export default function RoomsPage() {
   const { user } = useAuth();
@@ -29,6 +30,7 @@ export default function RoomsPage() {
     capacity: 2,
     pricePerNight: 0,
     amenities: "",
+    images: [] as string[],
   });
 
   // Load rooms
@@ -57,6 +59,7 @@ export default function RoomsPage() {
       capacity: 2,
       pricePerNight: 0,
       amenities: "",
+      images: [],
     });
     setShowForm(true);
   }
@@ -71,6 +74,7 @@ export default function RoomsPage() {
       capacity: room.capacity,
       pricePerNight: room.pricePerNight / 100, // Convert cents to dollars for the form
       amenities: room.amenities.join(", "),
+      images: room.images || [],
     });
     setShowForm(true);
   }
@@ -88,6 +92,7 @@ export default function RoomsPage() {
           .split(",")
           .map((a) => a.trim())
           .filter(Boolean),
+        images: form.images,
       };
 
       if (editingRoom) {
@@ -222,9 +227,14 @@ export default function RoomsPage() {
                 placeholder="e.g., wifi, ac, ocean-view, balcony"
               />
             </div>
-          </div>
 
-          <div className="form-actions">
+              <div className="md:col-span-2">
+                <ImageUpload
+                  label="Room Image"
+                  defaultImage={form.images?.[0]}
+                  onUpload={(url) => setForm({ ...form, images: [url] })}
+                />
+              </div>
             <button onClick={handleSave} className="btn-primary">
               {editingRoom ? "Save Changes" : "Create Room"}
             </button>
@@ -267,6 +277,12 @@ export default function RoomsPage() {
                   <p className="text-gray-400 text-xs">/night</p>
                 </div>
               </div>
+
+              {room.images?.[0] && (
+                <div className="mt-3 w-full h-40 bg-gray-100 rounded-md overflow-hidden">
+                  <img src={room.images[0].startsWith('http') ? room.images[0] : `http://localhost:5000${room.images[0]}`} alt={room.name} className="w-full h-full object-cover" />
+                </div>
+              )}
 
               <p className="text-gray-500 text-sm mt-3 line-clamp-2">{room.description}</p>
 

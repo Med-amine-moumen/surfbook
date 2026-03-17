@@ -28,6 +28,8 @@ import {
 } from "@/lib/api";
 import { formatPrice, calculateNights, formatDate } from "@/lib/helpers";
 import { Company, Room, SurfPackage, Activity, Session } from "@/types";
+import { useLanguage } from "@/lib/i18n";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 // Represents an activity the user has selected + the session they picked
 interface SelectedActivity {
@@ -36,6 +38,7 @@ interface SelectedActivity {
 }
 
 export default function BookingPage() {
+  const { t } = useLanguage();
   const params = useParams();
   const router = useRouter();
   const slug = params.slug as string;
@@ -108,7 +111,7 @@ export default function BookingPage() {
   // ================================
   async function searchRooms() {
     if (!checkIn || !checkOut) {
-      setError("Please select both check-in and check-out dates.");
+      setError("Please select both check-in and {t.booking.checkOut}s.");
       return;
     }
     if (new Date(checkIn) >= new Date(checkOut)) {
@@ -273,14 +276,14 @@ export default function BookingPage() {
   // STEP NAVIGATION
   // ================================
   const stepLabels = [
-    "Dates",
-    "Room",
-    "Package",
-    "Activities",
-    "Sessions",
-    "Details",
-    "Review",
-    "Payment",
+    t.booking.dates,
+    t.booking.room,
+    t.booking.package,
+    t.booking.activities,
+    t.booking.sessions,
+    t.booking.details,
+    t.booking.review,
+    t.booking.payment,
   ];
 
   function goToStep(target: number) {
@@ -411,6 +414,9 @@ export default function BookingPage() {
   // ================================
   return (
     <div className="min-h-screen bg-gray-50">
+      <div className="absolute top-4 right-8 z-10 text-black">
+        <LanguageSwitcher />
+      </div>
       {/* Header */}
       <div className="bg-gray-900 text-white py-10 relative overflow-hidden">
         <div className="max-w-4xl mx-auto px-4 relative">
@@ -476,13 +482,15 @@ export default function BookingPage() {
         {step === 1 && (
           <div className="card">
             <h2 className="text-lg font-semibold text-gray-900 mb-1">
-              When would you like to stay?
+              {t.booking.stepDates}
             </h2>
-            <p className="text-gray-400 text-sm mb-5">Select your dates and number of guests</p>
+            <p className="text-gray-400 text-sm mb-5">
+              {t.booking.stepDatesDesc}
+            </p>
             <div className="form-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
               <div>
                 <label className="label">
-                  Check-in Date
+                  {t.booking.checkIn}
                 </label>
                 <input
                   type="date"
@@ -494,7 +502,7 @@ export default function BookingPage() {
               </div>
               <div>
                 <label className="label">
-                  Check-out Date
+                  {t.booking.checkOut}
                 </label>
                 <input
                   type="date"
@@ -533,7 +541,7 @@ export default function BookingPage() {
               className="btn-primary mt-6 px-8"
               disabled={loading}
             >
-              {loading ? "Searching..." : "Search Available Rooms"}
+              {loading ? "Searching..." : t.booking.searchRooms}
             </button>
           </div>
         )}
@@ -1355,3 +1363,7 @@ export default function BookingPage() {
     </div>
   );
 }
+
+
+
+

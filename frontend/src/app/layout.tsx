@@ -6,6 +6,7 @@
 
 import type { Metadata } from "next";
 import { AuthProvider } from "@/lib/auth";
+import { LanguageProvider } from "@/lib/i18n";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -21,8 +22,12 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth">
       <body className="font-sans">
-        {/* AuthProvider gives all pages access to login state */}
-        <AuthProvider>{children}</AuthProvider>
+        {/* Providers giving access to global states */}
+        <AuthProvider>
+          <LanguageProvider>
+            {children}
+          </LanguageProvider>
+        </AuthProvider>
       </body>
     </html>
   );

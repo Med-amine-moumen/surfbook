@@ -8,18 +8,45 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { invoiceApi } from "@/lib/api";
 import { formatPrice, formatDate } from "@/lib/helpers";
 import { Invoice } from "@/types";
 
 export default function BookingConfirmationPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const bookingId = params.bookingId as string;
+  const isCanceled = searchParams.get("canceled");
 
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+  const handlePayNow = async () => {
+    try {
+      setIsProcessingPayment(true);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/stripe/checkout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ bookingId }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('Failed to create checkout session');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Could not initiate payment. Please try again.');
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
 
   // Load the invoice for this booking
   useEffect(() => {
@@ -88,6 +115,12 @@ export default function BookingConfirmationPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Canceled Banner */}
+      {isCanceled && (
+        <div className="bg-red-50 border-b border-red-200 text-red-700 px-4 py-3 text-center font-medium">
+          Payment was canceled. You can try again using the Pay Now button below.
+        </div>
+      )}
       {/* Header */}
       <div className="bg-gray-900 text-white py-10 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 1440 320\'%3E%3Cpath fill=\'%23ffffff\' d=\'M0,160L48,176C96,192,192,224,288,218.7C384,213,480,171,576,149.3C672,128,768,128,864,149.3C960,171,1056,213,1152,218.7C1248,224,1344,192,1392,176L1440,160L1440,320L0,320Z\'/%3E%3C/svg%3E")' }}></div>
@@ -254,17 +287,26 @@ export default function BookingConfirmationPage() {
 
           {/* Download PDF Button */}
           <div className="flex gap-3">
+            {invoice.paymentStatus === "unpaid" && (
+              <button
+                onClick={handlePayNow}
+                disabled={isProcessingPayment}
+                className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg shadow-sm transition-all focus:ring-2 focus:ring-green-500 focus:ring-offset-2 flex-1 md:flex-none justify-center flex items-center gap-2"
+              >
+                {isProcessingPayment ? "Processing..." : "Pay Now Online"}
+              </button>
+            )}
             <a
               href={invoiceApi.getPdfUrl(invoice._id)}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-primary inline-flex items-center gap-2"
+              className="btn-primary inline-flex items-center justify-center gap-2 flex-1 md:flex-none"
             >
               Download Invoice PDF
             </a>
             <a
               href="/"
-              className="btn-secondary inline-flex items-center gap-2"
+              className="btn-secondary inline-flex items-center justify-center gap-2 flex-1 md:flex-none"
             >
               ← Back to Home
             </a>

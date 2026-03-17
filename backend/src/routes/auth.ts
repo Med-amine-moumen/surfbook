@@ -8,20 +8,40 @@
 
 import express, { Response } from "express";
 import jwt from "jsonwebtoken";
+import { z } from "zod";
 import User from "../models/User";
 import Company from "../models/Company";
 import Subscription, { SUBSCRIPTION_PLANS } from "../models/Subscription";
 import { verifyToken, AuthRequest } from "../middleware/auth";
 import { generateSlug } from "../utils/helpers";
+import { authLimiter } from "../middleware/rateLimiter";
+import { validate } from "../middleware/validate";
 
 const router = express.Router();
+
+const registerSchema = z.object({
+  body: z.object({
+    email: z.string().email("Invalid email address"),
+    password: z.string().min(6, "Password must be at least 6 characters"),
+    firstName: z.string().min(1, "First name is required"),
+    lastName: z.string().min(1, "Last name is required"),
+    companyName: z.string().optional(),
+  })
+});
+
+const loginSchema = z.object({
+  body: z.object({
+    email: z.string().email("Invalid email address"),
+    password: z.string().min(1, "Password is required"),
+  })
+});
 
 // ================================
 // REGISTER
 // Creates a new user account.
 // If the user is a company owner, also creates their company.
 // ================================
-router.post("/register", async (req: AuthRequest, res: Response) => {
+router.post("/register", authLimiter, validate(registerSchema), async (req: AuthRequest, res: Response) => {
   try {
     const { email, password, firstName, lastName, companyName } = req.body;
 
@@ -117,7 +137,7 @@ router.post("/register", async (req: AuthRequest, res: Response) => {
 // LOGIN
 // Checks email and password, returns a JWT token.
 // ================================
-router.post("/login", async (req: AuthRequest, res: Response) => {
+router.post("/login", authLimiter, validate(loginSchema), async (req: AuthRequest, res: Response) => {
   try {
     const { email, password } = req.body;
 

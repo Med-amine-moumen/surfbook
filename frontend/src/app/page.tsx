@@ -4,9 +4,15 @@
 // It shows what our platform offers and has signup/login buttons.
 // ================================
 
+"use client";
+
 import Link from "next/link";
+import { useLanguage } from "@/lib/i18n";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function HomePage() {
+  const { t } = useLanguage();
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Navigation */}
@@ -15,17 +21,18 @@ export default function HomePage() {
           SurfBook
         </span>
         <div className="flex gap-3 items-center">
+          <LanguageSwitcher />
           <Link
             href="/login"
             className="text-white/90 hover:text-white font-medium px-4 py-2 transition-colors text-sm"
           >
-            Log In
+            {t.nav.login}
           </Link>
           <Link
             href="/register"
             className="bg-sky-500 text-white font-medium text-sm px-5 py-2.5 rounded-lg hover:bg-sky-600 transition-colors"
           >
-            Get Started
+            {t.nav.getStarted}
           </Link>
         </div>
       </nav>
@@ -68,10 +75,10 @@ export default function HomePage() {
             - z-10 places content above the video and overlay layers */}
         <div className="relative z-10 text-center max-w-2xl mx-auto px-6">
           <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight tracking-tight">
-            The Booking Platform for Surf Camps
+            {t.home.heroTitle}
           </h1>
           <p className="text-lg text-white/80 mb-10 leading-relaxed">
-            Manage rooms, packages, bookings, and customers — all in one place.
+            {t.home.heroSubtitle}
           </p>
 
           {/* CTA Buttons */}
@@ -80,13 +87,13 @@ export default function HomePage() {
               href="/register"
               className="inline-block bg-sky-500 text-white font-semibold text-lg px-10 py-4 rounded-lg hover:bg-sky-600 transition-colors"
             >
-              Start Free Trial
+              {t.home.startFreeTrial}
             </Link>
             <Link
               href="/book/bali-surf-camp"
               className="inline-block border border-white/60 text-white font-semibold text-lg px-10 py-4 rounded-lg hover:bg-white/10 transition-colors"
             >
-              Book a Demo
+              {t.home.bookDemo}
             </Link>
           </div>
         </div>
@@ -95,17 +102,17 @@ export default function HomePage() {
       {/* Features Section */}
       <section className="max-w-5xl mx-auto px-6 py-24 bg-slate-50">
         <h2 className="text-3xl font-semibold text-slate-900 text-center mb-4">
-          Everything you need to run your surf camp
+          {t.home.featuresTitle}
         </h2>
         <p className="text-slate-500 text-center mb-16 max-w-xl mx-auto">
-          Simple tools to manage your business. No complexity, no distractions.
+          {t.home.featuresSubtitle}
         </p>
 
         <div className="grid md:grid-cols-3 gap-6">
           {[
             {
-              title: "Online Booking",
-              desc: "Customers check availability, pick a room, choose a package, and book in minutes.",
+              title: t.home.featureBooking,
+              desc: t.home.featureBookingDesc,
               icon: (
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="w-6 h-6">
                   <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
@@ -113,8 +120,8 @@ export default function HomePage() {
               ),
             },
             {
-              title: "Room Management",
-              desc: "Add rooms, set prices, and the system prevents double bookings automatically.",
+              title: t.home.featureRooms,
+              desc: t.home.featureRoomsDesc,
               icon: (
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="w-6 h-6">
                   <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
@@ -122,8 +129,8 @@ export default function HomePage() {
               ),
             },
             {
-              title: "Dashboard",
-              desc: "See bookings, customers, payments, and occupancy in a clean overview.",
+              title: t.home.featureDashboard,
+              desc: t.home.featureDashboardDesc,
               icon: (
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="w-6 h-6">
                   <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />

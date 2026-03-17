@@ -6,7 +6,9 @@
 import express, { Response } from "express";
 import Payment from "../models/Payment";
 import Booking from "../models/Booking";
+import Company from "../models/Company";
 import { verifyToken, requireRole, AuthRequest } from "../middleware/auth";
+import { sendEmail, emailTemplates } from "../services/email";
 
 const router = express.Router();
 
@@ -50,7 +52,7 @@ router.post(
       const booking = await Booking.findOne({
         _id: bookingId,
         companyId: req.user!.companyId,
-      });
+      }).populate("customerId");
 
       if (!booking) {
         res.status(404).json({ message: "Booking not found." });
@@ -92,6 +94,40 @@ router.post(
       }
 
       await booking.save();
+
+      // ================================
+      // SEND EMAIL NOTIFICATIONS
+      // ================================
+      try {
+        const company = await Company.findById(req.user!.companyId);
+        const customer: any = booking.customerId;
+
+        if (company && customer) {
+          const templates = emailTemplates.paymentConfirmed(
+            customer.firstName,
+            company.name,
+            amount
+          );
+
+          // Notify customer
+          sendEmail({
+            to: customer.email,
+            subject: `Payment Confirmed - ${company.name}`,
+            html: templates.customerHtml,
+          });
+
+          // Notify company admin
+          if (company.email) {
+            sendEmail({
+              to: company.email,
+              subject: `Payment Received: $${amount} from ${customer.firstName}`,
+              html: templates.adminHtml,
+            });
+          }
+        }
+      } catch (emailErr) {
+        console.error("Failed to send payment confirmation email:", emailErr);
+      }
 
       res.status(201).json({
         message: "Payment recorded!",

@@ -8,6 +8,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
+import path from "path";
 
 // Import all route files
 import authRoutes from "./routes/auth";
@@ -23,6 +24,9 @@ import subscriptionRoutes from "./routes/subscriptions";
 import activityRoutes from "./routes/activities";
 import sessionRoutes from "./routes/sessions";
 import invoiceRoutes from "./routes/invoices";
+import uploadRoutes from "./routes/upload";
+import stripeRoutes, { stripeWebhookController } from "./routes/stripe";
+import { apiLimiter } from "./middleware/rateLimiter";
 
 // Load environment variables from .env file
 dotenv.config();
@@ -43,8 +47,19 @@ app.use(
   })
 );
 
+// ================================
+// STRIPE WEBHOOK
+// Handle stripe webhook before express.json() parses the request body
+// ================================
+app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), stripeWebhookController);
+
 // Parse JSON request bodies (so we can read req.body)
 app.use(express.json());
+
+// Apply global rate limiter to all /api routes
+app.use("/api", apiLimiter);
+
+app.use("/api/stripe", stripeRoutes);
 
 // ================================
 // ROUTES
@@ -65,6 +80,10 @@ app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/activities", activityRoutes);
 app.use("/api/sessions", sessionRoutes);
 app.use("/api/invoices", invoiceRoutes);
+app.use("/api/upload", uploadRoutes);
+
+// Serve static files (like uploaded images)
+app.use(express.static(path.join(__dirname, "../public")));
 
 // Simple health check route
 app.get("/api/health", (_req, res) => {

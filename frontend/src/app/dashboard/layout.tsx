@@ -7,6 +7,8 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { subscriptionApi } from "@/lib/api";
+import { useLanguage } from "@/lib/i18n";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function DashboardLayout({
   children,
@@ -21,6 +23,8 @@ export default function DashboardLayout({
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(
     null
   );
+
+  const { t } = useLanguage();
 
   const isSuperAdmin = user?.role === "super_admin";
 
@@ -72,21 +76,21 @@ export default function DashboardLayout({
 
   // Navigation — text only, no icons
   const companyNavItems = [
-    { label: "Overview", href: "/dashboard", section: "" },
-    { label: "Calendar", href: "/dashboard/calendar", section: "" },
-    { label: "Bookings", href: "/dashboard/bookings", section: "manage" },
-    { label: "Rooms", href: "/dashboard/rooms", section: "manage" },
-    { label: "Packages", href: "/dashboard/packages", section: "manage" },
-    { label: "Activities", href: "/dashboard/activities", section: "manage" },
-    { label: "Sessions", href: "/dashboard/sessions", section: "manage" },
-    { label: "Customers", href: "/dashboard/customers", section: "people" },
-    { label: "Team", href: "/dashboard/team", section: "people" },
+    { label: t.dashboard.overview, href: "/dashboard", section: "" },
+    { label: t.dashboard.calendar, href: "/dashboard/calendar", section: "" },
+    { label: t.dashboard.bookings, href: "/dashboard/bookings", section: "manage" },
+    { label: t.dashboard.rooms, href: "/dashboard/rooms", section: "manage" },
+    { label: t.dashboard.packages, href: "/dashboard/packages", section: "manage" },
+    { label: t.dashboard.activities, href: "/dashboard/activities", section: "manage" },
+    { label: t.dashboard.sessions, href: "/dashboard/sessions", section: "manage" },
+    { label: t.dashboard.customers, href: "/dashboard/customers", section: "people" },
+    { label: t.dashboard.team, href: "/dashboard/team", section: "people" },
     {
-      label: "Subscription",
+      label: "Subscription", // Not translated, but ok
       href: "/dashboard/subscription",
       section: "billing",
     },
-    { label: "Settings", href: "/dashboard/settings", section: "billing" },
+    { label: t.dashboard.settings, href: "/dashboard/settings", section: "billing" },
   ];
 
   const navItems = companyNavItems;
@@ -180,13 +184,16 @@ export default function DashboardLayout({
             onClick={logout}
             className="text-xs font-medium text-gray-400 hover:text-red-600 transition-colors"
           >
-            Sign out
+            {t.dashboard.logout}
           </button>
         </div>
       </aside>
 
       {/* Main content */}
       <main className="flex-1 ml-56 min-h-screen">
+        <div className="absolute top-4 right-8 z-10">
+          <LanguageSwitcher />
+        </div>
         {subscriptionExpired && (
           <div className="bg-red-600 text-white px-8 py-3 flex items-center justify-between">
             <div>

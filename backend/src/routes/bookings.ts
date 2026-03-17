@@ -16,8 +16,32 @@ import Session from "../models/Session";
 import { verifyToken, requireRole, AuthRequest } from "../middleware/auth";
 import { requireActiveSubscription } from "../middleware/subscription";
 import { calculateNights, calculateBookingPrice } from "../utils/helpers";
+import { sendEmail, emailTemplates } from "../services/email";
+import { bookingLimiter } from "../middleware/rateLimiter";
+import { validate } from "../middleware/validate";
+import { z } from "zod";
 
 const router = express.Router();
+
+const createBookingSchema = z.object({
+  body: z.object({
+    companyId: z.string(),
+    roomId: z.string(),
+    packageId: z.string(),
+    checkIn: z.string(),
+    checkOut: z.string(),
+    numberOfGuests: z.number().int().positive(),
+    firstName: z.string().min(1, "First name is required"),
+    lastName: z.string().min(1, "Last name is required"),
+    email: z.string().email("Invalid email address"),
+    phone: z.string().optional(),
+    notes: z.string().optional(),
+    activities: z.array(z.object({
+      activityId: z.string(),
+      sessionId: z.string().optional(),
+    })).optional(),
+  })
+});
 
 // ================================
 // CREATE BOOKING (PUBLIC)
@@ -33,7 +57,7 @@ const router = express.Router();
 // NOTE: We check if the company's subscription is active.
 // If expired, the booking is blocked and the customer sees an error.
 // ================================
-router.post("/", async (req: AuthRequest, res: Response) => {
+router.post("/", bookingLimiter, validate(createBookingSchema), async (req: AuthRequest, res: Response) => {
   try {
     const {
       companyId,
@@ -257,6 +281,39 @@ router.post("/", async (req: AuthRequest, res: Response) => {
     await booking.save();
 
     // ================================
+    // Send email notifications
+    // ================================
+    try {
+      const templates = emailTemplates.bookingCreated(
+        customer.firstName,
+        company.name,
+        {
+          checkIn: checkInDate,
+          checkOut: checkOutDate,
+          guests: numberOfGuests,
+        }
+      );
+
+      // Notify customer
+      sendEmail({
+        to: customer.email,
+        subject: `Your Booking at ${company.name} is Confirmed!`,
+        html: templates.customerHtml,
+      });
+
+      // Notify company (using company email if exists, otherwise fallback or skip)
+      if (company.email) {
+        sendEmail({
+          to: company.email,
+          subject: `New Booking: ${customer.firstName} ${customer.lastName}`,
+          html: templates.adminHtml,
+        });
+      }
+    } catch (emailErr) {
+      console.error("Failed to send booking emails:", emailErr);
+    }
+
+    // ================================
     // STEP 7b: Increment bookedCount on sessions
     // Now that the booking is saved, mark those session seats as taken.
     // ================================
@@ -305,7 +362,11 @@ router.get(
       }
 
       // Filter by date range if provided
-      if (startDate || endDate) {
+      if (startDate && endDate) {
+        // For calendar view: any booking that overlaps with the date range
+        filter.checkIn = { $lte: new Date(endDate as string) };
+        filter.checkOut = { $gte: new Date(startDate as string) };
+      } else if (startDate || endDate) {
         filter.checkIn = {};
         if (startDate) filter.checkIn.$gte = new Date(startDate as string);
         if (endDate) filter.checkIn.$lte = new Date(endDate as string);
@@ -369,15 +430,42 @@ router.patch(
       const booking = await Booking.findOne({
         _id: req.params.id,
         companyId: req.user!.companyId,
-      });
+      }).populate("customerId");
 
       if (!booking) {
         res.status(404).json({ message: "Booking not found." });
         return;
       }
 
+      const previousStatus = booking.status;
       booking.status = status;
       await booking.save();
+
+      // ================================
+      // Send email notification for status change
+      // ================================
+      if (previousStatus !== status && booking.customerId) {
+        try {
+          const company = await Company.findById(req.user!.companyId);
+          const customer: any = booking.customerId;
+          
+          if (company && customer.email) {
+            const templates = emailTemplates.bookingStatusChanged(
+              customer.firstName,
+              company.name,
+              status
+            );
+            
+            sendEmail({
+              to: customer.email,
+              subject: `Update on your booking at ${company.name}`,
+              html: templates.customerHtml,
+            });
+          }
+        } catch (emailErr) {
+          console.error("Failed to send booking status email:", emailErr);
+        }
+      }
 
       res.json({ message: `Booking ${status}!`, booking });
     } catch (error) {

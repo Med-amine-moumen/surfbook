@@ -11,6 +11,7 @@ import { useAuth } from "@/lib/auth";
 import { companyApi, paymentApi, bookingApi } from "@/lib/api";
 import { formatPrice, formatDate, getStatusColor, capitalize } from "@/lib/helpers";
 import { Company, Payment, Booking } from "@/types";
+import ImageUpload from "@/components/ImageUpload";
 
 type SettingsTab = "company" | "payment-settings" | "payment-history";
 
@@ -34,6 +35,8 @@ export default function SettingsPage() {
     city: "",
     country: "",
     website: "",
+    logo: "",
+    coverImage: "",
   });
 
   // Payment settings state
@@ -69,13 +72,15 @@ export default function SettingsPage() {
         setCompany(data.company);
         setForm({
           name: data.company.name,
-          description: data.company.description,
-          email: data.company.email,
-          phone: data.company.phone,
-          address: data.company.address,
-          city: data.company.city,
-          country: data.company.country,
-          website: data.company.website,
+          description: data.company.description || "",
+          email: data.company.email || "",
+          phone: data.company.phone || "",
+          address: data.company.address || "",
+          city: data.company.city || "",
+          country: data.company.country || "",
+          website: data.company.website || "",
+          logo: data.company.logo || "",
+          coverImage: data.company.coverImage || "",
         });
         // Load payment settings from company
         if (data.company.paymentSettings) {
@@ -334,6 +339,21 @@ export default function SettingsPage() {
                   onChange={(e) =>
                     setForm({ ...form, description: e.target.value })
                   }
+                />
+              </div>
+
+              <div className="md:col-span-1">
+                <ImageUpload
+                  label="Company Logo"
+                  defaultImage={form.logo}
+                  onUpload={(url) => setForm({ ...form, logo: url })}
+                />
+              </div>
+              <div className="md:col-span-1">
+                <ImageUpload
+                  label="Cover Image (Surf Camp)"
+                  defaultImage={form.coverImage}
+                  onUpload={(url) => setForm({ ...form, coverImage: url })}
                 />
               </div>
             </div>

@@ -36,6 +36,7 @@ async function apiRequest(
 
   // Make the request
   const response = await fetch(`${API_URL}${endpoint}`, {
+    cache: "no-store",
     ...options,
     headers,
   });
