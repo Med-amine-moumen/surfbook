@@ -184,6 +184,6 @@ export const translations = {
   }
 };
 
-export type Language = 'en' | 'fr' | 'es';
+export type Language = 'en';
 
 

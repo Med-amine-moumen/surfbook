@@ -8,7 +8,6 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { subscriptionApi } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function DashboardLayout({
   children,
@@ -191,9 +190,6 @@ export default function DashboardLayout({
 
       {/* Main content */}
       <main className="flex-1 ml-56 min-h-screen">
-        <div className="absolute top-4 right-8 z-10">
-          <LanguageSwitcher />
-        </div>
         {subscriptionExpired && (
           <div className="bg-red-600 text-white px-8 py-3 flex items-center justify-between">
             <div>

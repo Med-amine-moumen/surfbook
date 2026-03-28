@@ -21,3 +21,5 @@ surf/
 
 
 Default accounts: admin@surfbooking.com / admin123 (super admin), owner@balisurfcamp.com / owner123 (company owner)
+
+http://localhost:3000/super-admin/login

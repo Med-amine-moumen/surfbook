@@ -29,7 +29,6 @@ import {
 import { formatPrice, calculateNights, formatDate } from "@/lib/helpers";
 import { Company, Room, SurfPackage, Activity, Session } from "@/types";
 import { useLanguage } from "@/lib/i18n";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 // Represents an activity the user has selected + the session they picked
 interface SelectedActivity {
@@ -111,7 +110,7 @@ export default function BookingPage() {
   // ================================
   async function searchRooms() {
     if (!checkIn || !checkOut) {
-      setError("Please select both check-in and {t.booking.checkOut}s.");
+      setError(`Please select both check-in and ${t.booking.checkOut}s.`);
       return;
     }
     if (new Date(checkIn) >= new Date(checkOut)) {
@@ -414,9 +413,6 @@ export default function BookingPage() {
   // ================================
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="absolute top-4 right-8 z-10 text-black">
-        <LanguageSwitcher />
-      </div>
       {/* Header */}
       <div className="bg-gray-900 text-white py-10 relative overflow-hidden">
         <div className="max-w-4xl mx-auto px-4 relative">

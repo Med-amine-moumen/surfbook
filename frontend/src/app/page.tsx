@@ -8,7 +8,6 @@
 
 import Link from "next/link";
 import { useLanguage } from "@/lib/i18n";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function HomePage() {
   const { t } = useLanguage();
@@ -21,7 +20,6 @@ export default function HomePage() {
           SurfBook
         </span>
         <div className="flex gap-3 items-center">
-          <LanguageSwitcher />
           <Link
             href="/login"
             className="text-white/90 hover:text-white font-medium px-4 py-2 transition-colors text-sm"

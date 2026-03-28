@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext } from "react";
 import { translations, Language } from "@/locales";
 
 type Translations = typeof translations.en;
@@ -14,22 +14,11 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>("en");
-
-  // Load language from localStorage on mount
-  useEffect(() => {
-    const savedLang = localStorage.getItem("surfbook_lang") as Language;
-    if (savedLang && translations[savedLang]) {
-      setLanguageState(savedLang);
-    }
-  }, []);
-
-  const setLanguage = (lang: Language) => {
-    setLanguageState(lang);
-    localStorage.setItem("surfbook_lang", lang);
-  };
-
+  const language: Language = "en";
   const t = translations[language];
+
+  // Provide a no-op fallback since setLanguage is no longer used but satisfies the type
+  const setLanguage = (lang: Language) => {};
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t }}>
