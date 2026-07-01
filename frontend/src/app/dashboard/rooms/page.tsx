@@ -8,10 +8,34 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
-import { roomApi } from "@/lib/api";
+import { resolveAssetUrl, roomApi } from "@/lib/api";
 import { formatPrice } from "@/lib/helpers";
 import { Room } from "@/types";
 import ImageUpload from "@/components/ImageUpload";
+
+function RoomImage({ room }: { room: Room }) {
+  const [failed, setFailed] = useState(false);
+  const src = resolveAssetUrl(room.images?.[0]);
+
+  if (!src || failed) {
+    return (
+      <div style={{ width: "100%", height: "160px", borderRadius: "12px", overflow: "hidden", marginBottom: "14px", background: "#EFE7D7", display: "flex", alignItems: "center", justifyContent: "center", color: "#5C6470", fontSize: "13px" }}>
+        No room image
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ width: "100%", height: "160px", borderRadius: "12px", overflow: "hidden", marginBottom: "14px", background: "#EFE7D7" }}>
+      <img
+        src={src}
+        alt={room.name}
+        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        onError={() => setFailed(true)}
+      />
+    </div>
+  );
+}
 
 export default function RoomsPage() {
   const { user } = useAuth();
@@ -21,6 +45,8 @@ export default function RoomsPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
+  const [formError, setFormError] = useState("");
+  const [actionError, setActionError] = useState("");
 
   // Form state
   const [form, setForm] = useState({
@@ -40,10 +66,12 @@ export default function RoomsPage() {
 
   async function loadRooms() {
     try {
+      setActionError("");
       const data = await roomApi.getAll();
       setRooms(data.rooms);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error loading rooms:", error);
+      setActionError(error.message || "Failed to load rooms.");
     } finally {
       setLoading(false);
     }
@@ -61,6 +89,7 @@ export default function RoomsPage() {
       amenities: "",
       images: [],
     });
+    setFormError("");
     setShowForm(true);
   }
 
@@ -76,15 +105,38 @@ export default function RoomsPage() {
       amenities: room.amenities.join(", "),
       images: room.images || [],
     });
+    setFormError("");
     setShowForm(true);
+  }
+
+  function validateRoomForm() {
+    if (!form.name.trim()) {
+      return "Room name is required.";
+    }
+    if (!form.type) {
+      return "Room type is required.";
+    }
+    if (!Number.isInteger(form.capacity) || form.capacity < 1) {
+      return "Capacity must be a whole number greater than or equal to 1.";
+    }
+    if (!Number.isFinite(form.pricePerNight) || form.pricePerNight <= 0) {
+      return "Price per night must be greater than 0.";
+    }
+    return "";
   }
 
   // Save room (create or update)
   async function handleSave() {
+    const validationError = validateRoomForm();
+    if (validationError) {
+      setFormError(validationError);
+      return;
+    }
+
     try {
       const roomData = {
-        name: form.name,
-        description: form.description,
+        name: form.name.trim(),
+        description: form.description.trim(),
         type: form.type,
         capacity: form.capacity,
         pricePerNight: Math.round(form.pricePerNight * 100), // Convert dollars to cents
@@ -102,21 +154,34 @@ export default function RoomsPage() {
       }
 
       setShowForm(false);
+      setFormError("");
       loadRooms(); // Refresh the list
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving room:", error);
+      setFormError(error.message || "Failed to save room.");
     }
   }
 
   // Delete room (soft delete)
   async function handleDelete(roomId: string) {
-    if (!confirm("Are you sure you want to delete this room?")) return;
+    if (!confirm("Deactivate this room? It will stay in the database and appear as inactive.")) return;
 
     try {
-      await roomApi.delete(roomId);
-      loadRooms();
-    } catch (error) {
+      setActionError("");
+      const data = await roomApi.delete(roomId);
+
+      if (data.room) {
+        setRooms((currentRooms) =>
+          currentRooms.map((room) =>
+            room._id === roomId ? { ...room, ...data.room } : room
+          )
+        );
+      } else {
+        await loadRooms();
+      }
+    } catch (error: any) {
       console.error("Error deleting room:", error);
+      setActionError(error.message || "Failed to deactivate room.");
     }
   }
 
@@ -134,6 +199,8 @@ export default function RoomsPage() {
         )}
       </div>
 
+      {actionError && <div className="alert-error">{actionError}</div>}
+
       {/* ================================
           ROOM FORM (Create/Edit)
           ================================ */}
@@ -143,6 +210,8 @@ export default function RoomsPage() {
             {editingRoom ? "Edit Room" : "New Room"}
           </h2>
 
+          {formError && <div className="alert-error">{formError}</div>}
+
           <div className="form-grid">
             <div>
               <label className="label">Room Name</label>
@@ -150,8 +219,12 @@ export default function RoomsPage() {
                 type="text"
                 className="input"
                 value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                onChange={(e) => {
+                  setForm({ ...form, name: e.target.value });
+                  setFormError("");
+                }}
                 placeholder="e.g., Ocean View Suite"
+                required
               />
             </div>
 
@@ -163,6 +236,7 @@ export default function RoomsPage() {
                 onChange={(e) =>
                   setForm({ ...form, type: e.target.value as Room["type"] })
                 }
+                required
               >
                 <option value="single">Single</option>
                 <option value="double">Double</option>
@@ -182,6 +256,8 @@ export default function RoomsPage() {
                   setForm({ ...form, capacity: Number(e.target.value) })
                 }
                 min={1}
+                step={1}
+                required
               />
             </div>
 
@@ -197,8 +273,9 @@ export default function RoomsPage() {
                     pricePerNight: Number(e.target.value),
                   })
                 }
-                min={0}
+                min={0.01}
                 step={0.01}
+                required
               />
             </div>
 
@@ -229,12 +306,15 @@ export default function RoomsPage() {
             </div>
 
               <div className="md:col-span-2">
-                <ImageUpload
-                  label="Room Image"
+              <ImageUpload
+                  label="Room Photo"
                   defaultImage={form.images?.[0]}
                   onUpload={(url) => setForm({ ...form, images: [url] })}
                 />
               </div>
+          </div>
+
+          <div className="form-actions">
             <button onClick={handleSave} className="btn-primary">
               {editingRoom ? "Save Changes" : "Create Room"}
             </button>
@@ -263,6 +343,8 @@ export default function RoomsPage() {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {rooms.map((room) => (
             <div key={room._id} className="card-hover group">
+              <RoomImage room={room} />
+
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="text-base font-semibold text-gray-900">{room.name}</h3>
@@ -277,12 +359,6 @@ export default function RoomsPage() {
                   <p className="text-gray-400 text-xs">/night</p>
                 </div>
               </div>
-
-              {room.images?.[0] && (
-                <div className="mt-3 w-full h-40 bg-gray-100 rounded-md overflow-hidden">
-                  <img src={room.images[0].startsWith('http') ? room.images[0] : `http://localhost:5000${room.images[0]}`} alt={room.name} className="w-full h-full object-cover" />
-                </div>
-              )}
 
               <p className="text-gray-500 text-sm mt-3 line-clamp-2">{room.description}</p>
 
@@ -322,12 +398,12 @@ export default function RoomsPage() {
                   >
                     Edit
                   </button>
-                  {user?.role === "admin" && (
+                  {user?.role === "admin" && room.isActive && (
                     <button
                       onClick={() => handleDelete(room._id)}
                       className="text-sm font-medium text-red-500 hover:text-red-700 transition-colors"
                     >
-                      Delete
+                      Deactivate
                     </button>
                   )}
                 </div>

@@ -34,6 +34,16 @@ const upload = multer({
   },
 });
 
+function getPublicBackendUrl(req: express.Request) {
+  const configuredUrl = process.env.BACKEND_URL?.replace(/\/$/, "");
+
+  if (configuredUrl) {
+    return configuredUrl;
+  }
+
+  return `${req.protocol}://${req.get("host")}`;
+}
+
 // Single image upload endpoint
 router.post("/", verifyToken, upload.single("image"), (req, res) => {
   try {
@@ -41,8 +51,11 @@ router.post("/", verifyToken, upload.single("image"), (req, res) => {
       return res.status(400).json({ error: "Please upload a file" });
     }
 
-    const imageUrl = `/uploads/${req.file.filename}`;
-    res.status(200).json({ url: imageUrl });
+    const relativeUrl = `/uploads/${req.file.filename}`;
+    res.status(200).json({
+      url: `${getPublicBackendUrl(req)}${relativeUrl}`,
+      relativeUrl,
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -56,9 +69,11 @@ router.post("/multiple", verifyToken, upload.array("images", 5), (req, res) => {
     }
 
     const files = req.files as Express.Multer.File[];
-    const imageUrls = files.map((file) => `/uploads/${file.filename}`);
+    const relativeUrls = files.map((file) => `/uploads/${file.filename}`);
+    const baseUrl = getPublicBackendUrl(req);
+    const imageUrls = relativeUrls.map((url) => `${baseUrl}${url}`);
 
-    res.status(200).json({ urls: imageUrls });
+    res.status(200).json({ urls: imageUrls, relativeUrls });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

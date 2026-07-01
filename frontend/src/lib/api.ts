@@ -4,9 +4,57 @@
 // Instead of writing fetch() everywhere, we use these helpers.
 // ================================
 
-// Base URL for API calls
-// In development, Next.js rewrites /api/* to our backend (see next.config.js)
-const API_URL = "/api";
+// Base URL for API calls.
+// Local development can use the Next.js rewrite at /api.
+// Production can set NEXT_PUBLIC_API_URL to either:
+// - https://your-backend.com
+// - https://your-backend.com/api
+function normalizeApiBase(rawBase?: string) {
+  const base = (rawBase || "/api").replace(/\/$/, "");
+
+  if (base === "" || base === "/api") {
+    return "/api";
+  }
+
+  return base.endsWith("/api") ? base : `${base}/api`;
+}
+
+export const API_URL = normalizeApiBase(process.env.NEXT_PUBLIC_API_URL);
+
+function getApiOrigin() {
+  if (API_URL === "/api") {
+    return "";
+  }
+
+  return API_URL.endsWith("/api") ? API_URL.slice(0, -4) : API_URL;
+}
+
+export function getApiUrl(endpoint: string) {
+  const normalizedEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  return `${API_URL}${normalizedEndpoint}`;
+}
+
+export function resolveAssetUrl(url?: string) {
+  if (!url) {
+    return "";
+  }
+
+  if (
+    url.startsWith("http://") ||
+    url.startsWith("https://") ||
+    url.startsWith("data:") ||
+    url.startsWith("blob:")
+  ) {
+    return url;
+  }
+
+  if (url.startsWith("/uploads")) {
+    const apiOrigin = getApiOrigin();
+    return apiOrigin ? `${apiOrigin}${url}` : url;
+  }
+
+  return url;
+}
 
 // ================================
 // HELPER: Make an API request
@@ -35,7 +83,7 @@ async function apiRequest(
   }
 
   // Make the request
-  const response = await fetch(`${API_URL}${endpoint}`, {
+  const response = await fetch(getApiUrl(endpoint), {
     cache: "no-store",
     ...options,
     headers,

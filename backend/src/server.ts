@@ -39,10 +39,22 @@ const app = express();
 // Middleware runs before every request.
 // ================================
 
-// Allow requests from our frontend (CORS)
+const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:3000")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+// Allow requests from our configured frontend URL(s)
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   })
 );
@@ -82,8 +94,8 @@ app.use("/api/sessions", sessionRoutes);
 app.use("/api/invoices", invoiceRoutes);
 app.use("/api/upload", uploadRoutes);
 
-// Serve static files (like uploaded images)
-app.use(express.static(path.join(__dirname, "../public")));
+// Serve static files (like uploaded room images)
+app.use("/uploads", express.static(path.join(__dirname, "../public/uploads")));
 
 // Simple health check route
 app.get("/api/health", (_req, res) => {
@@ -95,7 +107,7 @@ app.get("/api/health", (_req, res) => {
 // We connect to MongoDB first, then start the server.
 // ================================
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5005;
 const MONGODB_URI =
   process.env.MONGODB_URI || "mongodb://localhost:27017/surf-booking";
 

@@ -5,11 +5,25 @@
 // ================================
 
 import express, { Response } from "express";
+import { z } from "zod";
 import Room from "../models/Room";
 import Booking from "../models/Booking";
 import { verifyToken, requireRole, AuthRequest } from "../middleware/auth";
+import { validate } from "../middleware/validate";
 
 const router = express.Router();
+
+const roomPayloadSchema = z.object({
+  body: z.object({
+    name: z.string().trim().min(1, "Room name is required."),
+    description: z.string().optional().default(""),
+    type: z.enum(["single", "double", "suite", "dorm", "bungalow"]),
+    capacity: z.number().int("Capacity must be a whole number.").min(1, "Capacity must be at least 1."),
+    pricePerNight: z.number().min(1, "Price per night must be greater than 0."),
+    amenities: z.array(z.string().trim()).optional().default([]),
+    images: z.array(z.string().trim()).optional().default([]),
+  }),
+});
 
 // ================================
 // GET AVAILABLE ROOMS (PUBLIC)
@@ -150,6 +164,7 @@ router.post(
   "/",
   verifyToken,
   requireRole("admin", "manager"),
+  validate(roomPayloadSchema),
   async (req: AuthRequest, res: Response) => {
     try {
       const { name, description, type, capacity, pricePerNight, amenities, images } =
@@ -184,6 +199,7 @@ router.put(
   "/:id",
   verifyToken,
   requireRole("admin", "manager"),
+  validate(roomPayloadSchema),
   async (req: AuthRequest, res: Response) => {
     try {
       const room = await Room.findOne({
@@ -232,10 +248,15 @@ router.delete(
         return;
       }
 
+      if (!room.isActive) {
+        res.json({ message: "Room is already inactive.", room });
+        return;
+      }
+
       room.isActive = false;
       await room.save();
 
-      res.json({ message: "Room deleted." });
+      res.json({ message: "Room deactivated.", room });
     } catch (error) {
       console.error("Delete room error:", error);
       res.status(500).json({ message: "Something went wrong." });

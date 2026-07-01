@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { ZodError, ZodTypeAny } from 'zod';
+import { ZodTypeAny } from 'zod';
 
 export const validate = (schema: ZodTypeAny) => 
   async (req: Request, res: Response, next: NextFunction) => {
@@ -11,10 +11,11 @@ export const validate = (schema: ZodTypeAny) =>
       });
       return next();
     } catch (error: any) {
-      if (error && error.errors) {
+      const validationErrors = error?.errors || error?.issues;
+      if (validationErrors) {
         return res.status(400).json({
           message: 'Validation failed',
-          errors: error.errors.map((e: any) => ({
+          errors: validationErrors.map((e: any) => ({
             field: e.path ? e.path.join('.') : '',
             message: e.message
           }))

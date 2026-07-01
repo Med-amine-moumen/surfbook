@@ -20,3 +20,15 @@ Thumbs.db
 # Debug logs
 npm-debug.log*
 yarn-debug.log*
+*.log
+*.err.log
+
+# Archives / generated report bundles
+*.zip
+*.rar
+
+# Runtime uploads generated during local testing
+backend/public/uploads/
+
+# Local assistant/tool metadata
+.claude/

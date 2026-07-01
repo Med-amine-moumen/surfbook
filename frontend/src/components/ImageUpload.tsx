@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getApiUrl, resolveAssetUrl } from "@/lib/api";
 
 interface ImageUploadProps {
   onUpload: (url: string) => void;
@@ -11,6 +12,10 @@ interface ImageUploadProps {
 export default function ImageUpload({ onUpload, label = "Upload Image", defaultImage }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState(defaultImage || "");
+
+  useEffect(() => {
+    setPreview(defaultImage || "");
+  }, [defaultImage]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -23,26 +28,25 @@ export default function ImageUpload({ onUpload, label = "Upload Image", defaultI
 
     try {
       const token = localStorage.getItem("token");
-      const API_URL = "http://localhost:5000/api"; // Full URL or proxy path
-      const res = await fetch(`${API_URL}/upload`, {
+      const res = await fetch(getApiUrl("/upload"), {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
       });
 
       if (!res.ok) {
-        throw new Error("Upload failed");
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.message || data?.error || "Upload failed");
       }
 
       const data = await res.json();
-      // data.url returns /uploads/filename.ext
-      const fullUrl = `http://localhost:5000${data.url}`;
+      const fullUrl = resolveAssetUrl(data.url || data.relativeUrl);
       setPreview(fullUrl);
-      onUpload(data.url); // Use relative URL or full URL depending on how it's stored. Storing relative is fine if frontend prepends backend URL, but let's just store the full URL for simplicity here! Wait, the prompt says "Keep implementation simple".
+      onUpload(fullUrl);
       
     } catch (error) {
       console.error("Error uploading image:", error);
-      alert("Failed to upload image");
+      alert(error instanceof Error ? error.message : "Failed to upload image");
     } finally {
       setUploading(false);
     }
@@ -50,10 +54,10 @@ export default function ImageUpload({ onUpload, label = "Upload Image", defaultI
 
   return (
     <div className="flex flex-col gap-2 mb-4">
-      <label className="block text-sm font-medium text-gray-700">{label}</label>
+      <label className="label">{label}</label>
       {preview && (
-        <div className="relative w-32 h-32 overflow-hidden rounded-md border border-gray-200">
-          <img src={preview.startsWith('http') ? preview : `http://localhost:5000${preview}`} alt="Preview" className="object-cover w-full h-full" />
+        <div style={{ width: "128px", height: "128px", overflow: "hidden", borderRadius: "12px", border: "1px solid rgba(31,41,55,0.12)", background: "#EFE7D7" }}>
+          <img src={resolveAssetUrl(preview)} alt="Preview" className="object-cover w-full h-full" />
         </div>
       )}
       <input
@@ -61,14 +65,14 @@ export default function ImageUpload({ onUpload, label = "Upload Image", defaultI
         accept="image/*"
         onChange={handleFileChange}
         disabled={uploading}
-        className="block w-full text-sm text-gray-500
+        className="block w-full text-sm text-[#5C6470]
           file:mr-4 file:py-2 file:px-4
-          file:rounded-md file:border-0
+          file:rounded-xl file:border-0
           file:text-sm file:font-semibold
-          file:bg-indigo-50 file:text-indigo-700
-          hover:file:bg-indigo-100"
+          file:bg-[#EAF5FB] file:text-[#3F93C5]
+          hover:file:bg-[#DCEFF8]"
       />
-      {uploading && <p className="text-sm text-indigo-500">Uploading...</p>}
+      {uploading && <p className="text-sm text-[#5DA8D6]">Uploading...</p>}
     </div>
   );
 }
