@@ -39,11 +39,25 @@ const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:3000")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
+function isAllowedOrigin(origin?: string) {
+  if (!origin) {
+    return true;
+  }
+
+  if (allowedOrigins.includes(origin)) {
+    return true;
+  }
+
+  // Vercel creates production aliases and unique deployment URLs.
+  // Allow them so CORS does not break when the user opens either URL.
+  return /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin);
+}
+
 // Allow requests from our configured frontend URL(s)
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (isAllowedOrigin(origin)) {
         callback(null, true);
         return;
       }
