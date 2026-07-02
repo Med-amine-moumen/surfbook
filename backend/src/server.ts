@@ -34,11 +34,6 @@ dotenv.config();
 // Create the Express app
 const app = express();
 
-// ================================
-// MIDDLEWARE
-// Middleware runs before every request.
-// ================================
-
 const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:3000")
   .split(",")
   .map((origin) => origin.trim())
@@ -59,13 +54,41 @@ app.use(
   })
 );
 
+// Health check must be available before database-dependent routes.
+// Railway uses this endpoint to decide whether the service started correctly.
+app.get("/api/health", (_req, res) => {
+  const dbStates: Record<number, string> = {
+    0: "disconnected",
+    1: "connected",
+    2: "connecting",
+    3: "disconnecting",
+  };
+
+  res.json({
+    status: "ok",
+    message: "Surf Booking API is running!",
+    database: dbStates[mongoose.connection.readyState] || "unknown",
+  });
+});
+
+app.get("/", (_req, res) => {
+  res.json({
+    status: "ok",
+    message: "SurfBook backend is running. Use /api/health for health checks.",
+  });
+});
+
 // ================================
 // STRIPE WEBHOOK
 // Handle stripe webhook before express.json() parses the request body
 // ================================
-app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), stripeWebhookController);
+app.post(
+  "/api/stripe/webhook",
+  express.raw({ type: "application/json" }),
+  stripeWebhookController
+);
 
-// Parse JSON request bodies (so we can read req.body)
+// Parse JSON request bodies
 app.use(express.json());
 
 // Apply global rate limiter to all /api routes
@@ -75,8 +98,6 @@ app.use("/api/stripe", stripeRoutes);
 
 // ================================
 // ROUTES
-// Each route file handles a group of related endpoints.
-// For example, /api/auth handles login and register.
 // ================================
 
 app.use("/api/auth", authRoutes);
@@ -97,34 +118,30 @@ app.use("/api/upload", uploadRoutes);
 // Serve static files (like uploaded room images)
 app.use("/uploads", express.static(path.join(__dirname, "../public/uploads")));
 
-// Simple health check route
-app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", message: "Surf Booking API is running!" });
-});
-
 // ================================
 // DATABASE CONNECTION + SERVER START
-// We connect to MongoDB first, then start the server.
+// The server starts first so hosting health checks can pass.
+// MongoDB connects in the background and API routes use it once connected.
 // ================================
 
-const PORT = process.env.PORT || 5005;
+const PORT = Number(process.env.PORT) || 5005;
 const MONGODB_URI =
   process.env.MONGODB_URI || "mongodb://localhost:27017/surf-booking";
 
-// Connect to MongoDB
-mongoose
-  .connect(MONGODB_URI)
-  .then(() => {
-    console.log("✅ Connected to MongoDB");
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Allowed frontend origins: ${allowedOrigins.join(", ")}`);
+});
 
-    // Start the server only after DB is connected
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
-    });
+mongoose
+  .connect(MONGODB_URI, {
+    serverSelectionTimeoutMS: 10000,
+  })
+  .then(() => {
+    console.log("Connected to MongoDB");
   })
   .catch((error) => {
-    console.error("❌ MongoDB connection error:", error);
-    process.exit(1);
+    console.error("MongoDB connection error:", error);
   });
 
 export default app;
